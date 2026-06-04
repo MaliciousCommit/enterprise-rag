@@ -1,0 +1,91 @@
+# docker-compose.yml
+#
+# Services we run in Docker for local development:
+#   - qdrant:     vector database (Module 1)
+#   - postgres:   operational DB + LangGraph checkpoints (Module 4 onwards)
+#   - redis:      5-tier cache (Phase 6)
+#
+# For Module 1, only `qdrant` is needed.
+# The postgres and redis services are commented out — we add them
+# as we reach those phases. This teaches you to evolve infrastructure
+# incrementally rather than adding everything upfront.
+
+version: "3.9"
+
+services:
+
+  # ── Qdrant Vector Database ──────────────────────────────────────────────────
+  # Qdrant stores our document embeddings and serves HNSW vector search.
+  # We mount a volume so the index persists across container restarts.
+  # Without the volume, ingesting 10k chunks is lost every time you restart.
+  qdrant:
+    image: qdrant/qdrant:v1.9.0      # pin the version — never use `latest` in prod
+    container_name: qdrant_dev
+    ports:
+      - "6333:6333"                  # REST API  (QdrantClient default)
+      - "6334:6334"                  # gRPC API  (faster, used in Phase 10)
+    volumes:
+      - qdrant_storage:/qdrant/storage  # persistent index storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      # QDRANT__SERVICE__API_KEY: "your-key"  # uncomment for auth in prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── PostgreSQL (uncomment when we reach Module 4 / Phase 5) ─────────────────
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: postgres_dev
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: raguser
+  #     POSTGRES_PASSWORD: ragpass
+  #     POSTGRES_DB: enterprise_rag
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U raguser"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+
+  # ── Upstash Redis (uncomment when we reach Phase 6) ─────────────────────────
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: redis_dev
+  #   ports:
+  #     - "6379:6379"
+  #   command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+
+volumes:
+  qdrant_storage:
+  # postgres_data:    # uncomment when needed
+  # redis_data:       # uncomment when needed
+
+# ── HOW TO USE ──────────────────────────────────────────────────────────────
+#
+# Start Qdrant only (Module 1):
+#   docker compose up qdrant -d
+#
+# Check it's running:
+#   curl http://localhost:6333/healthz
+#   → {"title":"qdrant - vector search engine","version":"1.9.0"}
+#
+# View Qdrant dashboard (browser):
+#   http://localhost:6333/dashboard
+#
+# Stop everything:
+#   docker compose down
+#
+# Stop and remove ALL data (nuclear option):
+#   docker compose down -v

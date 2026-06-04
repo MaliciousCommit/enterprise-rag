@@ -1,0 +1,36 @@
+﻿# ── Secrets (NEVER commit these) ─────────────────────────────────────────────
+.env
+*.key
+*.pem
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+
+# ── Data (can be large, regenerated from scripts) ────────────────────────────
+data/raw/
+data/processed/
+*.pdf
+*.parquet
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
