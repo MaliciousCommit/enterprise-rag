@@ -73,9 +73,12 @@ def retrieve(
     logger.debug(f"Retrieving: '{query[:60]}...'")
     query_vector = embed_text(query)
 
-    results: list[ScoredPoint] = client.search(
+    # qdrant-client >= 1.7.0: query_points() replaces search()
+    # query=         the embedding vector (was query_vector= in older versions)
+    # result.points  the list of ScoredPoint (was the return value directly)
+    query_response = client.query_points(
         collection_name=settings.collection_name,
-        query_vector=query_vector,
+        query=query_vector,
         limit=k,
         score_threshold=score_threshold,
         with_payload=True,
@@ -91,7 +94,7 @@ def retrieve(
             chunk_index=r.payload.get("chunk_index", 0),
             point_id=str(r.id),
         )
-        for r in results
+        for r in query_response.points
     ]
 
     score_str = ", ".join(f"{c.score:.3f}" for c in chunks)

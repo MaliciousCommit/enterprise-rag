@@ -54,7 +54,8 @@ def get_qdrant_client() -> QdrantClient:
         host=settings.qdrant_host,
         port=settings.qdrant_port,
         api_key=settings.qdrant_api_key,  # None = no auth (local dev)
-        timeout=30,                         # seconds — increase for slow networks
+        timeout=30,
+        https = False,                                                  # seconds — increase for slow networks
     )
     logger.debug(
         f"Qdrant client created: {settings.qdrant_host}:{settings.qdrant_port}"
@@ -163,7 +164,7 @@ def get_collection_info(client: QdrantClient) -> dict:
         "name": settings.collection_name,
         "status": info.status.value if info.status else "unknown",
         "points_count": info.points_count or 0,
-        "vectors_count": info.vectors_count or 0,
+        "vectors_count": getattr(info, "vectors_count", None) or info.points_count or 0,
         "segments_count": info.segments_count or 0,
         "config": {
             "vector_size": settings.embedding_dim,
