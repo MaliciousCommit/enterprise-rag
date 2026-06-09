@@ -1,0 +1,158 @@
+{
+  "timestamp": "20260605_013633",
+  "suite": "full (12 questions)",
+  "summary": {
+    "avg_best_score": 0.5767244725,
+    "below_crag_pct": 91.66666666666666,
+    "fallback_rate": 25.0,
+    "intent_accuracy": 100.0,
+    "avg_latency_ms": 5404.086624999763,
+    "avg_cost_usd": 0.0091675
+  },
+  "results": [
+    {
+      "id": "q01",
+      "question": "What does OOMKilled mean and what causes it?",
+      "intent": "rag",
+      "best_score": 0.66415477,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 5988.076599998749,
+      "cost_usd": 0.00709,
+      "keyword_hits": 3,
+      "keyword_total": 4
+    },
+    {
+      "id": "q02",
+      "question": "How do I fix a pod stuck in CrashLoopBackOff?",
+      "intent": "rag",
+      "best_score": 0.59765995,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 7724.0174999897135,
+      "cost_usd": 0.014065,
+      "keyword_hits": 3,
+      "keyword_total": 4
+    },
+    {
+      "id": "q03",
+      "question": "How do I set resource requests and limits for a container?",
+      "intent": "rag",
+      "best_score": 0.6630391,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 5791.9222000055015,
+      "cost_usd": 0.01003,
+      "keyword_hits": 5,
+      "keyword_total": 5
+    },
+    {
+      "id": "q04",
+      "question": "What should I do when a node shows NotReady status?",
+      "intent": "rag",
+      "best_score": 0.68069047,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 6237.114999996265,
+      "cost_usd": 0.01211,
+      "keyword_hits": 4,
+      "keyword_total": 4
+    },
+    {
+      "id": "q05",
+      "question": "How do I debug a pod that keeps failing?",
+      "intent": "rag",
+      "best_score": 0.71070254,
+      "below_crag": false,
+      "has_fallback": false,
+      "latency_ms": 7263.972900007502,
+      "cost_usd": 0.012785,
+      "keyword_hits": 4,
+      "keyword_total": 5
+    },
+    {
+      "id": "q06",
+      "question": "How does Horizontal Pod Autoscaler work?",
+      "intent": "rag",
+      "best_score": 0.55211294,
+      "below_crag": true,
+      "has_fallback": true,
+      "latency_ms": 2266.524800012121,
+      "cost_usd": 0.00584,
+      "keyword_hits": 0,
+      "keyword_total": 5
+    },
+    {
+      "id": "q07",
+      "question": "Why is DNS resolution failing inside my pod?",
+      "intent": "rag",
+      "best_score": 0.6117574,
+      "below_crag": true,
+      "has_fallback": true,
+      "latency_ms": 6729.144099997939,
+      "cost_usd": 0.01077,
+      "keyword_hits": 4,
+      "keyword_total": 4
+    },
+    {
+      "id": "q08",
+      "question": "How do I configure RBAC permissions for a service account?",
+      "intent": "rag",
+      "best_score": 0.6244041,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 5980.311599996639,
+      "cost_usd": 0.011795,
+      "keyword_hits": 4,
+      "keyword_total": 5
+    },
+    {
+      "id": "q09",
+      "question": "What is a rolling deployment strategy and how do I configure it?",
+      "intent": "rag",
+      "best_score": 0.5906363,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 4764.168399997288,
+      "cost_usd": 0.007895,
+      "keyword_hits": 5,
+      "keyword_total": 5
+    },
+    {
+      "id": "q10",
+      "question": "How do I configure an Ingress with TLS?",
+      "intent": "rag",
+      "best_score": 0.5992955,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 5981.412199995248,
+      "cost_usd": 0.012385,
+      "keyword_hits": 4,
+      "keyword_total": 5
+    },
+    {
+      "id": "q11",
+      "question": "How many pods are currently in CrashLoopBackOff?",
+      "intent": "sql",
+      "best_score": 0.0,
+      "below_crag": true,
+      "has_fallback": false,
+      "latency_ms": 1105.9236000000965,
+      "cost_usd": 0.0,
+      "keyword_hits": 2,
+      "keyword_total": 2
+    },
+    {
+      "id": "q12",
+      "question": "Which pods are failing and what should I do to fix them?",
+      "intent": "hybrid",
+      "best_score": 0.6262406,
+      "below_crag": true,
+      "has_fallback": true,
+      "latency_ms": 5016.450600000098,
+      "cost_usd": 0.005245,
+      "keyword_hits": 0,
+      "keyword_total": 3
+    }
+  ]
+}

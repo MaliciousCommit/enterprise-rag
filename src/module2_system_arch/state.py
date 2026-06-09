@@ -142,6 +142,21 @@ class RAGState(TypedDict):
     # False if the full pipeline ran.
     # Used for monitoring: track cache hit rate over time.
 
+    # ── Phase 4: CRAG + Self-RAG ───────────────────────────────────────
+    retrieval_grade: str
+    # CRAG assessment of local retrieval quality.
+    # Set by crag_grader_node. One of: "correct", "ambiguous", "incorrect".
+    # Controls the conditional edge to tavily_search or generate.
+
+    tavily_results: list[str]
+    # Raw Tavily web search result strings (with [WEB SOURCE: url] prefix).
+    # Set by tavily_search_node. Empty list when CRAG grade is "correct".
+
+    self_rag_score: float
+    # Composite answer quality score 0.0-1.0 from self_rag_reflect_node.
+    # 0.5 × faithfulness + 0.3 × completeness + 0.2 × coherence.
+    # Controls the conditional edge to END or back to retrieve (cycle).
+
 
 def initial_state(question: str, session_id: str) -> RAGState:
     """
@@ -185,6 +200,11 @@ def initial_state(question: str, session_id: str) -> RAGState:
 
         # Cache
         cache_hit=False,
+
+        # Phase 4: CRAG + Self-RAG (set by their respective nodes)
+        retrieval_grade="",    # set by crag_grader_node
+        tavily_results=[],     # set by tavily_search_node
+        self_rag_score=1.0,   # set by self_rag_reflect_node (default=accept)
     )
 
 
@@ -232,3 +252,19 @@ def truncate_history(history: list[dict], max_turns: int = 5) -> list[dict]:
     """
     max_messages = max_turns * 2
     return history[-max_messages:] if len(history) > max_messages else history
+
+
+# ── Phase 4 fields (CRAG + Self-RAG) ──────────────────────────────────────────
+# These are appended to avoid breaking existing checkpoints.
+
+def get_phase4_defaults() -> dict:
+    """
+    Return default values for Phase 4 fields.
+    Used by initial_state() and to patch loaded checkpoints that
+    were created before Phase 4 fields existed.
+    """
+    return {
+        "retrieval_grade": "",     # "correct" | "ambiguous" | "incorrect"
+        "tavily_results":  [],     # raw Tavily result strings
+        "self_rag_score":  1.0,   # 0.0-1.0 composite quality score
+    }

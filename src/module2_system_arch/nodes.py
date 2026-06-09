@@ -132,29 +132,56 @@ async def retrieve_node(state: RAGState) -> dict:
 
     logger.info(f"retrieve_node: '{question[:50]}...'")
 
-    # Call Module 1's synchronous retrieve()
-    # Returns list[RetrievedChunk] with text, score, source, document_id
+    # ── PHASE 3 UPGRADE: try hybrid retrieval first ───────────────────────────
+    # Falls back to Module 1 naive retrieval if Phase 3 is unavailable.
+    # This pattern (try advanced, fall back to basic) is standard in production:
+    # a failing reranker model shouldn't take down the whole system.
+    try:
+        from src.phase3_retrieval.retriever import phase3_retrieve
+        import asyncio
+
+        # phase3_retrieve is async — we're already in an async context (LangGraph node)
+        chunks_p3 = await phase3_retrieve(
+            question        = question,
+            client          = client,
+            collection_name = settings.collection_name,
+            use_hyde        = True,
+            use_reranking   = True,
+            top_k           = settings.retrieval_k,
+        )
+
+        context = [c.text        for c in chunks_p3]
+        scores  = [c.rerank_score for c in chunks_p3]
+        sources = list({c.source  for c in chunks_p3})
+
+        logger.info(
+            f"retrieve_node [Phase3]: {len(chunks_p3)} chunks | "
+            f"rerank scores: {[f'{s:.3f}' for s in scores]}"
+        )
+
+        return {"context": context, "scores": scores, "sources": sources}
+
+    except ImportError:
+        logger.debug("Phase 3 retrieval not available, using Phase 2 naive retrieval")
+    except Exception as e:
+        logger.warning(f"Phase 3 retrieval failed ({e}), falling back to naive retrieval")
+
+    # ── FALLBACK: Module 1 naive retrieval ────────────────────────────────────
     chunks = retrieve(client, question, k=settings.retrieval_k)
 
     if not chunks:
         logger.warning("retrieve_node: No chunks retrieved — knowledge base may be empty")
 
-    # Extract fields from RetrievedChunk objects into plain Python types
-    # LangGraph serializes state to JSON for checkpointing —
-    # plain types (str, float, list) serialize cleanly.
-    # Custom dataclasses do NOT serialize cleanly → extract them here.
     context = [c.text   for c in chunks]
     scores  = [c.score  for c in chunks]
-    sources = list({c.source for c in chunks})  # deduplicated set → list
+    sources = list({c.source for c in chunks})
 
     logger.info(
-        f"retrieve_node: {len(chunks)} chunks | "
+        f"retrieve_node [Phase2]: {len(chunks)} chunks | "
         f"scores: {[f'{s:.3f}' for s in scores]} | "
         f"sources: {sources}"
     )
 
-    # Return ONLY the fields this node changed
-    # LangGraph merges this dict into the existing state
     return {
         "context": context,
         "scores":  scores,
