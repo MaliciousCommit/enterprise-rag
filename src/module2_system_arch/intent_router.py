@@ -221,14 +221,28 @@ async def intent_router_node(state: RAGState) -> dict:
     """
     question = state["question"]
 
+    # ── Phase 6: Check intent cache ───────────────────────────────────────────
+    # Cache hit: return immediately, skip the ~300ms LLM classification call.
+    # Cache miss: classify with LLM, then store result for 24h.
+    try:
+        from src.phase6_cache.manager import get_cache_manager
+        cache = get_cache_manager()
+        cached_intent = cache.get_intent(question)
+        if cached_intent:
+            return {"intent": cached_intent, "cache_hit": False}  # cache_hit=False: answer not cached yet
+    except Exception:
+        pass  # Redis down — proceed without cache
+
     intent = await classify_intent(question)
 
-    # Return PARTIAL state update — only fields we're changing
-    # LangGraph merges this into the full RAGState
+    # Store result for next 24 hours
+    try:
+        cache.set_intent(question, intent.value)
+    except Exception:
+        pass
+
     return {
-        "intent": intent.value,         # "rag", "sql", or "hybrid"
-        # Note: prompt_tokens tracked here would accumulate with
-        # generation tokens. Phase 9 implements proper aggregation.
+        "intent": intent.value,
     }
 
 

@@ -296,15 +296,25 @@ async def generate_node(state: RAGState) -> dict:
         f"cost: ~${cost_usd:.4f}"
     )
 
+    # ── Phase 6: Write answer to cache ────────────────────────────────────────
+    # Cache on FIRST generation only (iteration=0).
+    # On Self-RAG regeneration (iteration=1+): don't cache the regen attempt —
+    # it was triggered by quality failure and may not be better.
+    # Only cache the final high-quality answer (after self_rag accepts it).
+    # We cache here at iteration=0 as an optimistic write; the answer cache
+    # at the FastAPI layer (run_graph) provides the higher-level answer cache.
+    if iteration == 0:
+        try:
+            from src.phase6_cache.manager import get_cache_manager
+            cache = get_cache_manager()
+            # Only cache if this isn't a fallback "I don't know" response
+            fallback_phrases = ["i do not have documentation", "escalate to the platform"]
+            if not any(p in result.answer.lower() for p in fallback_phrases):
+                cache.set_answer(question, result.answer)
+        except Exception:
+            pass  # Redis down — continue without caching
+
     # ── Update conversation history (Module 4) ────────────────────────────
-    # Append this Q&A pair to the history stored in the session state.
-    # On the NEXT turn with the same session_id, LangGraph loads this
-    # checkpoint — the generate_node will see the full history and can
-    # pass it to the LLM for context-aware follow-up answers.
-    #
-    # History is stored in a separate in-memory dict (not in RAGState)
-    # to avoid TypedDict compatibility issues with existing checkpoints.
-    # Phase 5 will migrate this cleanly into RAGState when we add PostgresSaver.
     _update_session_history(
         session_id=state.get("session_id", ""),
         question=question,

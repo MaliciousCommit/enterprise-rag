@@ -130,6 +130,31 @@ async def run_graph(question: str, session_id: str, graph=None) -> dict:
     if graph is None:
         graph = build_graph()
 
+    # ── Phase 6: Answer cache check ───────────────────────────────────────────
+    # Check BEFORE invoking the graph — a cache hit skips the entire pipeline:
+    # intent routing, embedding, retrieval, reranking, LLM generation.
+    # ~5,000ms → ~3ms. The highest-value optimisation in the system.
+    #
+    # NOT cached for SQL questions: live data changes frequently.
+    # The SQL result cache (TTL=15m) handles SQL freshness at a lower level.
+    # Here we only skip for RAG questions where the answer is truly stable.
+    try:
+        from src.phase6_cache.manager import get_cache_manager
+        cache = get_cache_manager()
+        cached_answer = cache.get_answer(question)
+        if cached_answer:
+            logger.info(f"run_graph: ANSWER CACHE HIT | session='{session_id}'")
+            # Return a synthetic state with the cached answer
+            state = initial_state(question=question, session_id=session_id)
+            state.update({
+                "answer":    cached_answer,
+                "intent":    cache.get_intent(question) or "rag",
+                "cache_hit": True,
+            })
+            return state
+    except Exception:
+        pass  # Redis down — run the full pipeline
+
     state  = initial_state(question=question, session_id=session_id)
     config = {"configurable": {"thread_id": session_id}}
 

@@ -30,6 +30,28 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise_rag_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    # maxmemory-policy allkeys-lru: when memory is full, evict least recently used keys
+    # This is correct for a cache — we want the HOT (recently used) keys to stay
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   qdrant_data:
   postgres_data:
+  redis_data:

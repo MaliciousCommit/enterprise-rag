@@ -65,7 +65,29 @@ async def sql_generate_node(state: RAGState) -> dict:
     question = state["question"]
     logger.info(f"sql_generate_node: '{question[:50]}...'")
 
+    # ── Phase 6: Check SQL generation cache ──────────────────────────────────
+    # Cache hit: skip the ~1.5s GPT-4o SQL generation call.
+    # IMPORTANT: SQL questions still require HITL approval even on cache hit.
+    # We cache the SQL structure (which is stable), not the execution result
+    # (which is fresh data, cached separately in Tier 4).
+    try:
+        from src.phase6_cache.manager import get_cache_manager
+        cache = get_cache_manager()
+        cached_sql = cache.get_sql(question)
+        if cached_sql:
+            logger.info(f"sql_generate_node: SQL cache HIT")
+            return {"sql_query": cached_sql}
+    except Exception:
+        pass
+
     sql = await generate_sql(question)
+
+    # Store for 24h
+    try:
+        if not sql.startswith("--"):  # don't cache error comments
+            cache.set_sql(question, sql)
+    except Exception:
+        pass
 
     return {"sql_query": sql}
 
@@ -100,7 +122,6 @@ async def sql_validate_node(state: RAGState) -> dict:
         logger.warning(f"SQL validation failed: {result.reason}")
         return {
             "sql_approved": False,
-            "iteration": 2,
             "answer": (
                 f"Generated SQL was rejected for security reasons: {result.reason}\n\n"
                 "The system only permits SELECT queries with LIMIT ≤ 100 "
@@ -197,6 +218,22 @@ async def sql_execute_node(state: RAGState) -> dict:
     if not sql:
         return {"sql_result": "Error: no SQL query to execute."}
 
+    # ── Phase 6: Check SQL result cache ──────────────────────────────────────
+    # Cache hit: skip the PostgreSQL query entirely.
+    # TTL=15m means results are at most 15 minutes stale.
+    # This is the most impactful cache for repeated SQL questions:
+    # "how many pods are failing?" asked every 5 minutes by a monitoring script
+    # only hits PostgreSQL once every 15 minutes.
+    try:
+        from src.phase6_cache.manager import get_cache_manager
+        cache = get_cache_manager()
+        cached_result = cache.get_sql_result(sql)
+        if cached_result:
+            logger.info("sql_execute_node: SQL result cache HIT (15m TTL)")
+            return {"sql_result": cached_result}
+    except Exception:
+        pass
+
     logger.info(f"sql_execute_node: executing approved SQL")
 
     result = execute_select(sql)
@@ -206,6 +243,13 @@ async def sql_execute_node(state: RAGState) -> dict:
         f"sql_execute_node: {result['row_count']} rows | "
         f"error: {result.get('error')}"
     )
+
+    # Cache the result for 15 minutes
+    try:
+        if not result.get("error"):
+            cache.set_sql_result(sql, formatted)
+    except Exception:
+        pass
 
     return {"sql_result": formatted}
 
